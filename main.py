@@ -17,19 +17,18 @@ async def command_start_handler(message: Message) -> None:
 async def command_start_handler(message: Message) -> None:
     await message.answer('''/start - Запускает бота
 /help - Вывод всех комманд и их назначения
-/ver - Вывод нынешней версии бота, а так же ответвтвенных за разработку данного бота
-/jobseeking - Выдача Телеграм канала "Навигатор трудоустроиства МГКЭИТ" ''')
-
-@dp.message(Command("ver"))
-async def command_start_handler(message: Message) -> None:
-    await message.answer('''MGKEITAssistant ver0.1 indev build 25Nov04Ka12a36
-Github project of the bot: https://github.com/TaihouKawasaki/MGKEITAssistant
-Made by: TaihouKawasaki, Klabautermann-von-Uten, YarMinator''')
+/jobseeking - Выдача Телеграм канала "Навигатор трудоустроиства МГКЭИТ" 
+/ver - Вывод нынешней версии бота, а так же ответвтвенных за разработку данного бота''')
 
 @dp.message(Command("jobseeking"))
 async def command_start_handler(message: Message) -> None:
     await message.answer("https://t.me/+hh0SWOc-tK80YjMy")
 
+@dp.message(Command("ver"))
+async def command_start_handler(message: Message) -> None:
+    await message.answer('''MGKEITAssistant ver0.1 indev build 25Nov04Ka01a00
+Github project of the bot: https://github.com/TaihouKawasaki/MGKEITAssistant
+Made by: TaihouKawasaki, Klabautermann-von-Uten, YarMinator''')
 
 #Indev Build classification: Last 2 digits of the year + first 3 symbols of the month + 2 digit date + day of the week + Hours + AM\PM + Minutes
 #Monday - Getsu
