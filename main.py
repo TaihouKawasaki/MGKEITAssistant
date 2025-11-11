@@ -7,7 +7,9 @@ from aiogram.types import Message
 # Import libraries for Yandex.Forms API
 from json import *
 from sys import *
-from requests import *
+import requests
+# Import libs for MGKEIT API
+import datetime
 
 
 #Initilization of the requests handler module
@@ -39,7 +41,7 @@ async def command_start_handler(message: Message) -> None:
     
 @dp.message(Command("ver"))
 async def command_start_handler(message: Message) -> None:
-    await message.answer('''MGKEITAssistant ver0.1 indev build 25Nov04Ka09p35
+    await message.answer('''MGKEITAssistant ver0.1 indev build 25Nov11Ka03p54
 Github project of the bot: https://github.com/TaihouKawasaki/MGKEITAssistant
 Made by: TaihouKawasaki, Klabautermann-von-Uten, YarMinator''')
 
@@ -52,23 +54,32 @@ Made by: TaihouKawasaki, Klabautermann-von-Uten, YarMinator''')
 #Saturday - Do
 #Sunday - Nichi
 
-#echoing user's text
-@dp.message()
-async def echo(message: types.Message):
-    await message.answer("Не распознал комманду, пропишите /help для получения списка комманд.")
 
 # Implementing Yandex.Forms API for feedback
 # Yandex API Docs: https://yandex.ru/support/forms/ru/api-ref/surveys/events_v1_views_frontend_submit_form_view
+# Abandoned for now
+yaurl = 'https://api.forms.yandex.net/v1/surveys/69117f7949af47ef77e765ba/form'
+myobj = {'id':'69117f7949af47ef77e765ba'}
+req = requests.get(url = yaurl, params = myobj)
 @dp.message(Command("feedback"))
 async def command_start_handler(message: Message) -> None:
-    await message.answer("TEST")
+    print(req.text)
+    await message.answer(req.text)
 
 
 #Implementing mgkeit.space API
 # mgkeit.space API Docs: https://mgkeit.space/developers
+colurl = "https://api.mgkeit.space/api/v1"
+tt = "/timetable"
+gp = "/groups"
+mc = "/buildings"
+usrgp = "1КС-1-11-25"
+usrmc = "TEST"
+curweekday = datetime.datetime.today().weekday()
 @dp.message(Command("timetable"))
 async def command_start_handler(message: Message) -> None:
-    await message.answer("TEST")
+    await message.answer("Производим запрос расписания на сегодня")
+    print(requests.post(url = colurl+tt, json = {'group': usrgp, 'day': curweekday}))
 
 
 
