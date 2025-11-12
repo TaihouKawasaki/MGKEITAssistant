@@ -74,13 +74,13 @@ tt = "/timetable"
 gp = "/groups"
 mc = "/buildings"
 usrgp = "1КС-1-11-25"
-usrmc = "TEST"
+usrmc = ""
 curweekday = datetime.datetime.today().weekday()
+api = 'Bearer mgk_live_t6tio7hb3o7im43hnupj2gcuozuf7zfqsxgelpw4acyzep4qlziq'
 @dp.message(Command("timetable"))
 async def command_start_handler(message: Message) -> None:
     await message.answer("Производим запрос расписания на сегодня")
-    print(requests.post(url = colurl+tt, json = {'group': usrgp, 'day': curweekday}))
-
+    print(requests.post(url = colurl+tt, headers = {'Authorization': api}, json = {'group': usrgp, 'day': curweekday}))
 
 
 #Bot initilization and it's API key
