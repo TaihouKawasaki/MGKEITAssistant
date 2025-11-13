@@ -22,7 +22,7 @@ async def command_start_handler(message: Message) -> None:
 
 @dp.message(Command("help"))
 async def command_start_handler(message: Message) -> None:
-    await message.answer('''/start - Запускает ботач
+    await message.answer('''/start - Запускает бота
 /help - Вывод всех комманд и их назначения
 /jobseeking - Выдача Телеграм канала "Навигатор трудоустроиства МГКЭИТ" 
 /ver - Вывод нынешней версии бота, а так же ответвтвенных за разработку данного бота
@@ -33,7 +33,7 @@ async def command_start_handler(message: Message) -> None:
 @dp.message(Command("jobseeking"))
 async def command_start_handler(message: Message) -> None:
     await message.answer("https://t.me/+hh0SWOc-tK80YjMy")
-ч
+    
 @dp.message(Command("doc"))
 async def command_start_handler(message: Message) -> None:
     await message.answer("Пока бот не может запросить справку, сделайте это самостоятельно по ссылке: https://mgkeit.space/documents")
@@ -41,7 +41,7 @@ async def command_start_handler(message: Message) -> None:
     
 @dp.message(Command("ver"))
 async def command_start_handler(message: Message) -> None:
-    await message.answer('''MGKEITAssistant ver0.1 indev build 25Nov13Moku08p00
+    await message.answer('''MGKEITAssistant ver0.1 indev build 25Nov13Moku08p11
 Github project of the bot in case I abandon this project: https://github.com/TaihouKawasaki/MGKEITAssistant
 Made by: TaihouKawasaki''')
 
@@ -82,13 +82,13 @@ async def command_start_handler(message: Message) -> None:
     await message.answer("Производим запрос расписания на сегодня")
     ttreq = requests.post(url = colurl+tt, headers = {'Authorization': api}, json = {'group': usrgp, 'day': curweekday})
     convttreqcode = str(ttreq)
-    await message.answer(convttreqcode)    
+    convttreqtext = str(ttreq.text)
+    await message.answer(convttreqcode)
+    await message.answer(convttreqtext)
     ttreqjson = ttreq.json()
     pair = 1
     numpair = 1
     pairstart = 1 
-    print(ttreq)
-    print(ttreqjson)
 
 #Bot initilization and it's API key
 async def main() -> None:
