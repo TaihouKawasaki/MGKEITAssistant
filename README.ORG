@@ -4,5 +4,5 @@
 ** TODO Reverse engineer API of mgkeit.space/documents
 ** TODO Make both https://forms.yandex.ru/u/673dd586c417f399cc1ebb07/?yqrid=5285b09f
 ** TODO Reimplement https://t.me/mgkeit_opendoor_bot?start=college_shipbuilding-cabinet_67
-** TODO Implement mgkeit.space API for lesson's timetable
+** TODO Implement mgkeit.space API for lesson's timetable (Doneish)
 ** DONE Make simple commands work such as: /start; /help; /ver. (Done)

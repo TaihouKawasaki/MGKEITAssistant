@@ -80,8 +80,15 @@ api = 'Bearer mgk_live_t6tio7hb3o7im43hnupj2gcuozuf7zfqsxgelpw4acyzep4qlziq'
 @dp.message(Command("timetable"))
 async def command_start_handler(message: Message) -> None:
     await message.answer("Производим запрос расписания на сегодня")
-    print(requests.post(url = colurl+tt, headers = {'Authorization': api}, json = {'group': usrgp, 'day': curweekday}))
-
+    ttreq = requests.post(url = colurl+tt, headers = {'Authorization': api}, json = {'group': usrgp, 'day': curweekday})
+    convttreqcode = str(ttreq)
+    await message.answer(convttreqcode)    
+    ttreqjson = ttreq.json()
+    pair = 1
+    numpair = 1
+    pairstart = 1 
+    print(ttreq)
+    print(ttreqjson)
 
 #Bot initilization and it's API key
 async def main() -> None:
