@@ -18,11 +18,11 @@ dp = Dispatcher()
 #Async functions answering to the main commands
 @dp.message(Command("start"))
 async def command_start_handler(message: Message) -> None:
-    await message.answer("Бот запущен!")
+    await message.answer("Бот запущен! Пропишите команду /help для получения списка команд")
 
 @dp.message(Command("help"))
 async def command_start_handler(message: Message) -> None:
-    await message.answer('''/start - Запускает бота
+    await message.answer('''/start - Запускает ботач
 /help - Вывод всех комманд и их назначения
 /jobseeking - Выдача Телеграм канала "Навигатор трудоустроиства МГКЭИТ" 
 /ver - Вывод нынешней версии бота, а так же ответвтвенных за разработку данного бота
@@ -33,7 +33,7 @@ async def command_start_handler(message: Message) -> None:
 @dp.message(Command("jobseeking"))
 async def command_start_handler(message: Message) -> None:
     await message.answer("https://t.me/+hh0SWOc-tK80YjMy")
-
+ч
 @dp.message(Command("doc"))
 async def command_start_handler(message: Message) -> None:
     await message.answer("Пока бот не может запросить справку, сделайте это самостоятельно по ссылке: https://mgkeit.space/documents")
@@ -41,9 +41,9 @@ async def command_start_handler(message: Message) -> None:
     
 @dp.message(Command("ver"))
 async def command_start_handler(message: Message) -> None:
-    await message.answer('''MGKEITAssistant ver0.1 indev build 25Nov11Ka03p54
-Github project of the bot: https://github.com/TaihouKawasaki/MGKEITAssistant
-Made by: TaihouKawasaki, Klabautermann-von-Uten, YarMinator''')
+    await message.answer('''MGKEITAssistant ver0.1 indev build 25Nov13Moku08p00
+Github project of the bot in case I abandon this project: https://github.com/TaihouKawasaki/MGKEITAssistant
+Made by: TaihouKawasaki''')
 
 #Indev Build classification: Last 2 digits of the year + first 3 symbols of the month + 2 digit date + day of the week + Hours + AM\PM + Minutes
 #Monday - Getsu
