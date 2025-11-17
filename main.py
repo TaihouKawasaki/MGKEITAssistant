@@ -4,9 +4,10 @@ from aiogram import *
 from os import *
 from aiogram.filters import Command
 from aiogram.types import Message
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 # Import libraries for Yandex.Forms API
 import json
-import  sys
+import sys
 import requests
 # Import libs for MGKEIT API
 import datetime
@@ -17,7 +18,26 @@ dp = Dispatcher()
 #Async functions answering to the main commands
 @dp.message(Command("start"))
 async def command_start_handler(message: Message) -> None:
-    await message.answer("Бот запущен! Пропишите команду /help для получения списка команд")
+    await message.answer('''Бот запущен! Вот список комманд:
+/start - Запускает бота
+/help - Вывод всех комманд и их назначения | вызов основной клавиатуры бота
+/jobseeking - Выдача Телеграм канала "Навигатор трудоустроиства МГКЭИТ" 
+/ver - Вывод нынешней версии бота, а так же ответвтвенных за разработку данного бота
+/doc - Запрос документов у МГКЭИТ
+/feedback - Обратная связь МГКЭИТ
+/timetable - Расписание занятий на сегодня''')
+    kb = ReplyKeyboardMarkup()
+    kb.add(KeyboardButton('/help'))
+    kb.add(KeyboardButton('/jobseeking'))
+    kb.add(KeyboardButton('/ver'))
+    kb.add(KeyboardButton('/doc'))
+    kb.add(KeyboardButton('/feedback'))
+    kb.add(KeyboardButton('/timetable'))
+    await bot.send_message(chat_id = message.from_user.id,
+                           text="test",
+                           parse_mode = "HTML",
+                           reply_markup=kb)
+    
 
 @dp.message(Command("help"))
 async def command_start_handler(message: Message) -> None:
@@ -65,7 +85,6 @@ async def command_start_handler(message: Message) -> None:
     print(req.text)
     await message.answer(req.text)
 
-
 #Implementing mgkeit.space API
 # mgkeit.space API Docs: https://mgkeit.space/developers
 colurl = "https://api.mgkeit.space/api/v1"
@@ -76,15 +95,30 @@ usrgp = "1КС-1-11-25"
 usrmc = ""
 curweekday = datetime.datetime.today().weekday()
 api = 'Bearer mgk_live_t6tio7hb3o7im43hnupj2gcuozuf7zfqsxgelpw4acyzep4qlziq'
+mcreq = requests.post(url = colurl+mc, headers = {'Authorization': api})
+mcjson = mcreq.json()
+
+@dp.message(Command("buildings"))
+async def command_start_handler(message: Message) -> None:
+    await message.answer("TEST")
+
+    
+@dp.message(Command("groups"))
+async def command_start_handler(message: Message) -> None:
+    await message.answer("Производим запрос групп")
+    
 @dp.message(Command("timetable"))
 async def command_start_handler(message: Message) -> None:
     await message.answer("Производим запрос расписания на сегодня")
     ttreq = requests.post(url = colurl+tt, headers = {'Authorization': api}, json = {'group': usrgp, 'day': curweekday})
     convttreqcode = str(ttreq)
     ttreqjson = ttreq.json()
-    print(ttreqjson['data'][0]['units'][0])
+    weekday = ttreqjson['data'][0]['day_name']
     print(ttreqjson['data'][0]['units'][1])
     await message.answer(convttreqcode)
+    await message.answer(f'''День недели: {weekday}
+    ''')
+
 
     
 #Bot initilization and it's API key
