@@ -5,12 +5,11 @@ from os import *
 from aiogram.filters import Command
 from aiogram.types import Message
 # Import libraries for Yandex.Forms API
-from json import *
-from sys import *
+import json
+import  sys
 import requests
 # Import libs for MGKEIT API
 import datetime
-
 
 #Initilization of the requests handler module
 dp = Dispatcher()
@@ -37,11 +36,11 @@ async def command_start_handler(message: Message) -> None:
 @dp.message(Command("doc"))
 async def command_start_handler(message: Message) -> None:
     await message.answer("Пока бот не может запросить справку, сделайте это самостоятельно по ссылке: https://mgkeit.space/documents")
-
+ 
     
 @dp.message(Command("ver"))
 async def command_start_handler(message: Message) -> None:
-    await message.answer('''MGKEITAssistant ver0.1 indev build 25Nov13Moku08p11
+    await message.answer('''MGKEITAssistant ver0.1 indev build 25Nov17Getsu09a00
 Github project of the bot in case I abandon this project: https://github.com/TaihouKawasaki/MGKEITAssistant
 Made by: TaihouKawasaki''')
 
@@ -82,14 +81,12 @@ async def command_start_handler(message: Message) -> None:
     await message.answer("Производим запрос расписания на сегодня")
     ttreq = requests.post(url = colurl+tt, headers = {'Authorization': api}, json = {'group': usrgp, 'day': curweekday})
     convttreqcode = str(ttreq)
-    convttreqtext = str(ttreq.text)
-    await message.answer(convttreqcode)
-    await message.answer(convttreqtext)
     ttreqjson = ttreq.json()
-    pair = 1
-    numpair = 1
-    pairstart = 1 
+    print(ttreqjson['data'][0]['units'][0])
+    print(ttreqjson['data'][0]['units'][1])
+    await message.answer(convttreqcode)
 
+    
 #Bot initilization and it's API key
 async def main() -> None:
     bot = Bot(token="7767007017:AAFAVDnC4ToW3G4PlaO7TTKDk6ZaNxFRwXM")
@@ -98,4 +95,15 @@ async def main() -> None:
 #loop
 if __name__ == "__main__":
     asyncio.run(main())
+
+
+
+#{'meta':{'version': '1.0', 'generated_at': '2025-11-15T15:29:39.680008+00:00', 'group': '1КС-1-11-25', 'building': 'Судостроительная', 'week': 'odd', 'current_week': 'odd', 'day_filter': 5, 'allowed_days': [0, 1, 2, 3, 4, 5]},'data':
+#                    [{'day_index': 5, 'day_name': 'Суббота', 'units':
+#                                [{'kind': 'pair', 'number': 1, 'display_number': 1, 'start': '8:30', 'end': '10:00', 'subject': 'Операционные системы и среды', 'teacher': 'Автухов С.В.', 'room': 'Дистанционное обучение', 'subgroup': '', 'source': 'base'},
+#                                {'kind': 'pair', 'number': 2, 'display_number': 2, 'start': '10:20', 'end': '11:50', 'subject': 'Инженерная компьютерная графика', 'teacher': 'Костин А.В.', 'room': 'Дистанционное обучение', 'subgroup': '', 'source': 'base'},
+#                                {'kind': 'pair', 'number': 3, 'display_number': 3, 'start': '12:10', 'end': '13:40', 'subject': 'Дискретная математика', 'teacher': 'Веприкова А.В.', 'room': 'Дистанционное обучение', 'subgroup': '', 'source': 'base'}
+#                                ]
+#                   }]
+#}
 
