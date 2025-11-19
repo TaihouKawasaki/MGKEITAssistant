@@ -6,3 +6,12 @@
 ** TODO College groups request and choosing
 ** DONE Implement mgkeit.space API for lesson's timetable (Done)
 ** DONE Make simple commands work such as: /start; /help; /ver. (Done)
+
+* How to install \ test
+** Install python 3
+** Install these packages for python:
+*** asyncio
+*** aiogram
+** Go to https://mgkeit.space/developers#home, make your own API key and paste it it line 97
+** Run main.py
+** Find and interact with the bot via this id: @mgkeit_test_bot
