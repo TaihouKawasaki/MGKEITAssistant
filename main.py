@@ -60,7 +60,7 @@ async def command_start_handler(message: Message) -> None:
     
 @dp.message(Command("ver"))
 async def command_start_handler(message: Message) -> None:
-    await message.answer('''MGKEITAssistant ver0.1 indev build 25Nov17Getsu09a00
+    await message.answer('''MGKEITAssistant ver0.1 indev build 25Nov19Sui03p31
 Github project of the bot in case I abandon this project: https://github.com/TaihouKawasaki/MGKEITAssistant
 Made by: TaihouKawasaki''')
 
@@ -92,11 +92,8 @@ tt = "/timetable"
 gp = "/groups"
 mc = "/buildings"
 usrgp = "1КС-1-11-25"
-usrmc = ""
 curweekday = datetime.datetime.today().weekday()
 api = 'Bearer mgk_live_t6tio7hb3o7im43hnupj2gcuozuf7zfqsxgelpw4acyzep4qlziq'
-mcreq = requests.post(url = colurl+mc, headers = {'Authorization': api})
-mcjson = mcreq.json()
 
 @dp.message(Command("buildings"))
 async def command_start_handler(message: Message) -> None:
@@ -114,7 +111,12 @@ async def command_start_handler(message: Message) -> None:
         istr = str(istr)
         await message.answer(istr + ". " + mcreqjson[i])
         i = i + 1
- 
+    await Form.name.set()
+    await message.reply("Выбирите номер филиала")
+    
+    global usrmc
+    usrmc = mcreqjson[3]
+    print(usrmc)
 
     
 @dp.message(Command("groups"))
@@ -152,6 +154,7 @@ async def command_start_handler(message: Message) -> None:
             else:
                 break
             i = i + 1
+    
 
     
 #Bot initilization and it's API key
