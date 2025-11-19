@@ -1,8 +1,8 @@
 * Planed
 ** DONE Make redirect to MGKEIT Jobseeking assistant telegram channel (Done)
 ** DONE Make a placeholder link to MGKEIT document requesting site (Done)
-** TODO Reverse engineer API of mgkeit.space/documents
-** TODO Make both https://forms.yandex.ru/u/673dd586c417f399cc1ebb07/?yqrid=5285b09f
-** TODO Reimplement https://t.me/mgkeit_opendoor_bot?start=college_shipbuilding-cabinet_67
-** TODO Implement mgkeit.space API for lesson's timetable (Doneish)
+** TODO Implement https://forms.yandex.ru/u/673dd586c417f399cc1ebb07/?yqrid=5285b09f in the bot
+** DONE College buildings request and choosing(Done)
+** TODO College groups request and choosing
+** DONE Implement mgkeit.space API for lesson's timetable (Done)
 ** DONE Make simple commands work such as: /start; /help; /ver. (Done)
