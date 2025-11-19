@@ -11,7 +11,7 @@ import sys
 import requests
 # Import libs for MGKEIT API
 import datetime
-
+import time
 #Initilization of the requests handler module
 dp = Dispatcher()
 
@@ -100,13 +100,27 @@ mcjson = mcreq.json()
 
 @dp.message(Command("buildings"))
 async def command_start_handler(message: Message) -> None:
-    await message.answer("TEST")
+    mcreq = requests.post(url = colurl+mc, headers = {'Authorization': api})
+    await message.answer("Производим запрос филиалов колледжа")
+    time.sleep(1)
+    convmcreqcode = str(mcreq)
+    await message.answer(convmcreqcode)
+    mcreqjson = mcreq.json()
+    mcreqjson = mcreqjson['buildings']
+    nummc = len(mcreqjson)
+    i = 1
+    for i in range(nummc):
+        istr = i + 1
+        istr = str(istr)
+        await message.answer(istr + ". " + mcreqjson[i])
+        i = i + 1
+ 
 
     
 @dp.message(Command("groups"))
 async def command_start_handler(message: Message) -> None:
     await message.answer("Производим запрос групп")
-    
+
 @dp.message(Command("timetable"))
 async def command_start_handler(message: Message) -> None:
     await message.answer("Производим запрос расписания на сегодня")
@@ -114,11 +128,30 @@ async def command_start_handler(message: Message) -> None:
     convttreqcode = str(ttreq)
     ttreqjson = ttreq.json()
     weekday = ttreqjson['data'][0]['day_name']
-    print(ttreqjson['data'][0]['units'][1])
     await message.answer(convttreqcode)
-    await message.answer(f'''День недели: {weekday}
-    ''')
-
+    await message.answer(f"День недели: {weekday}")
+    reqvalid = True
+    i = 0
+    while reqvalid == True:
+            kind = ttreqjson['data'][0]['units'][i]['kind']
+            if kind == "pair":
+                display_number = ttreqjson['data'][0]['units'][i]['display_number']
+                start = ttreqjson['data'][0]['units'][i]['start']
+                subject = ttreqjson['data'][0]['units'][i]['subject']
+                end = ttreqjson['data'][0]['units'][i]['end']
+                teher = ttreqjson['data'][0]['units'][i]['teacher']
+                rum = ttreqjson['data'][0]['units'][i]['room']
+                await message.answer(f'''Тип занятия {kind}
+Номер занятия {display_number}
+Название предмета: {subject}
+Преподаватель: {teher}
+Кабинет: {rum}
+Начало: {start}
+Конец: {end}''')
+                reqvalid = True
+            else:
+                break
+            i = i + 1
 
     
 #Bot initilization and it's API key
@@ -132,12 +165,4 @@ if __name__ == "__main__":
 
 
 
-#{'meta':{'version': '1.0', 'generated_at': '2025-11-15T15:29:39.680008+00:00', 'group': '1КС-1-11-25', 'building': 'Судостроительная', 'week': 'odd', 'current_week': 'odd', 'day_filter': 5, 'allowed_days': [0, 1, 2, 3, 4, 5]},'data':
-#                    [{'day_index': 5, 'day_name': 'Суббота', 'units':
-#                                [{'kind': 'pair', 'number': 1, 'display_number': 1, 'start': '8:30', 'end': '10:00', 'subject': 'Операционные системы и среды', 'teacher': 'Автухов С.В.', 'room': 'Дистанционное обучение', 'subgroup': '', 'source': 'base'},
-#                                {'kind': 'pair', 'number': 2, 'display_number': 2, 'start': '10:20', 'end': '11:50', 'subject': 'Инженерная компьютерная графика', 'teacher': 'Костин А.В.', 'room': 'Дистанционное обучение', 'subgroup': '', 'source': 'base'},
-#                                {'kind': 'pair', 'number': 3, 'display_number': 3, 'start': '12:10', 'end': '13:40', 'subject': 'Дискретная математика', 'teacher': 'Веприкова А.В.', 'room': 'Дистанционное обучение', 'subgroup': '', 'source': 'base'}
-#                                ]
-#                   }]
-#}
 
