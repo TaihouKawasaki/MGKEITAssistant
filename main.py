@@ -18,7 +18,8 @@ dp = Dispatcher()
 #Async functions answering to the main commands
 @dp.message(Command("start"))
 async def command_start_handler(message: Message) -> None:
-    await message.answer('''Бот запущен! Вот список комманд:
+    await message.answer('''Бот запущен! Для первичной настройки бота выберите филиал колледжа коммандой /groups затем группу коммандой /groups
+Вот список комманд:
 /start - Запускает бота
 /help - Вывод всех комманд и их назначения | вызов основной клавиатуры бота
 /jobseeking - Выдача Телеграм канала "Навигатор трудоустроиства МГКЭИТ" 
@@ -26,17 +27,6 @@ async def command_start_handler(message: Message) -> None:
 /doc - Запрос документов у МГКЭИТ
 /feedback - Обратная связь МГКЭИТ
 /timetable - Расписание занятий на сегодня''')
-    kb = ReplyKeyboardMarkup()
-    kb.add(KeyboardButton('/help'))
-    kb.add(KeyboardButton('/jobseeking'))
-    kb.add(KeyboardButton('/ver'))
-    kb.add(KeyboardButton('/doc'))
-    kb.add(KeyboardButton('/feedback'))
-    kb.add(KeyboardButton('/timetable'))
-    await bot.send_message(chat_id = message.from_user.id,
-                           text="test",
-                           parse_mode = "HTML",
-                           reply_markup=kb)
     
 
 @dp.message(Command("help"))
@@ -60,7 +50,7 @@ async def command_start_handler(message: Message) -> None:
     
 @dp.message(Command("ver"))
 async def command_start_handler(message: Message) -> None:
-    await message.answer('''MGKEITAssistant ver0.1 indev build 25Nov19Sui03p31
+    await message.answer('''MGKEITAssistant ver0.1 indev build 25Nov20Moku04p21
 Github project of the bot in case I abandon this project: https://github.com/TaihouKawasaki/MGKEITAssistant
 Made by: TaihouKawasaki''')
 
@@ -91,7 +81,6 @@ colurl = "https://api.mgkeit.space/api/v1"
 tt = "/timetable"
 gp = "/groups"
 mc = "/buildings"
-usrgp = "1КС-1-11-25"
 curweekday = datetime.datetime.today().weekday()
 api = 'Bearer mgk_live_t6tio7hb3o7im43hnupj2gcuozuf7zfqsxgelpw4acyzep4qlziq'
 
@@ -111,17 +100,35 @@ async def command_start_handler(message: Message) -> None:
         istr = str(istr)
         await message.answer(istr + ". " + mcreqjson[i])
         i = i + 1
-    await Form.name.set()
-    await message.reply("Выбирите номер филиала")
+
     
+        
     global usrmc
-    usrmc = mcreqjson[3]
+    usrmc = mcreqjson[4]
     print(usrmc)
 
     
 @dp.message(Command("groups"))
 async def command_start_handler(message: Message) -> None:
-    await message.answer("Производим запрос групп")
+    try:
+        await message.answer("Производим запрос групп")
+        gpreq = requests.post(url = colurl+gp, headers = {'Authorization': api}, json = {'building': usrmc, 'limit': 500})
+        gpreqjson = gpreq.json()
+        gpreqjson = gpreqjson['groups']
+        numgp = len(gpreqjson)
+        print(numgp)
+        i = 1
+        for i in range(numgp):
+            istr = i + 1
+            istr = str(istr)
+            await message.answer(istr + ". " + gpreqjson[i])
+            i = i + 1
+
+        
+    except NameError:
+        await message.answer("Филиал не выбран, пропишите /buildings для выбора филиала")
+    global usrgp
+    usrgp = "1КС-1-11-25"
 
 @dp.message(Command("timetable"))
 async def command_start_handler(message: Message) -> None:
