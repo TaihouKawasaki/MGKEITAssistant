@@ -201,7 +201,7 @@ async def button_groups_handler(message: Message) -> None:
     
 #Bot initilization and it's API key
 async def main() -> None:
-    bot = Bot(token="5455458009:AAGSa9Qq2enzAXjbjxA9nHcCPpmvfreqYkk")
+    bot = Bot(token="7767007017:AAFAVDnC4ToW3G4PlaO7TTKDk6ZaNxFRwXM")
     await dp.start_polling(bot)
 
 #loop
