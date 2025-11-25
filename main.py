@@ -37,8 +37,8 @@ commands_keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 async def command_start_handler(message: Message) -> None:
     await message.answer('''Бот запущен!
 Для первичной настройки бота выберите филиал колледжа командой, затем группу.''', reply_markup=commands_keyboard)
-    with open('userrequests.txt', 'a') as file:
-        file.write(f'command /start was used at {datetime.datetime.now()} \n')
+    with open('usercommandrequests.txt', 'a') as file:
+        file.write(f'At {datetime.datetime.now()} command /start was used \n')
 
 @dp.message(Command("help"))
 async def command_help_handler(message: Message) -> None:
@@ -53,20 +53,20 @@ async def command_help_handler(message: Message) -> None:
 Филиалы - выбор филиала колледжа
 Группа - выбор учебной группы'''
     await message.answer(help_text, reply_markup=commands_keyboard)
-    with open('userrequests.txt', 'a') as file:
-        file.write(f'command /help was used at {datetime.datetime.now()} \n')
+    with open('usercommandrequests.txt', 'a') as file:
+        file.write(f'At {datetime.datetime.now()} command /help was used \n')
     
 @dp.message(Command("jobseeking"))
 async def command_jobseeking_handler(message: Message) -> None:
     await message.answer("https://t.me/+hh0SWOc-tK80YjMy")
-    with open('userrequests.txt', 'a') as file:
-        file.write(f'command /jobseeking was used at {datetime.datetime.now()} \n')
+    with open('usercommandrequests.txt', 'a') as file:
+        file.write(f'At {datetime.datetime.now()} command /jobseeking was used \n')
     
 @dp.message(Command("doc"))
 async def command_doc_handler(message: Message) -> None:
     await message.answer("Пока бот не может запросить справку, сделайте это самостоятельно по ссылке: https://mgkeit.space/documents")
-    with open('userrequests.txt', 'a') as file:
-        file.write(f'command /doc was used at {datetime.datetime.now()} \n')
+    with open('usercommandrequests.txt', 'a') as file:
+        file.write(f'At {datetime.datetime.now()} command /doc was used \n')
  
     
 @dp.message(Command("ver"))
@@ -74,11 +74,8 @@ async def command_ver_handler(message: Message) -> None:
     await message.answer('''MGKEITAssistant ver0.1 indev build 25Nov21Kin07p00
 Github project of the bot in case I abandon this project: https://github.com/TaihouKawasaki/MGKEITAssistant
 Made by: TaihouKawasaki, NaokiEijiro''')
-    with open('userrequests.txt', 'a') as file:
-        file.write(f'command /ver was used at {datetime.datetime.now()} \n')
-
-
-
+    with open('usercommandrequests.txt', 'a') as file:
+        file.write(f'At {datetime.datetime.now()} command /ver was used \n')
 #Indev Build classification: Last 2 digits of the year + first 3 symbols of the month + 2 digit date + day of the week + Hours + AM\PM + Minutes
 
 #Monday - Getsu
@@ -108,8 +105,8 @@ db_config = {
 @dp.message(Command("feedback"))
 async def command_feedback_handler(message: Message) -> None:
     await message.answer("Ведется работа над добавлением обратной связи, пока используйте данную ссылку: mgkeit.space")
-    with open('userrequests.txt', 'a') as file:
-        file.write(f'command /feedback was used at {datetime.datetime.now()} \n')
+    with open('usercommandrequests.txt', 'a') as file:
+        file.write(f'At {datetime.datetime.now()} command /feedback was used \n')
 
 
 
@@ -141,12 +138,12 @@ async def command_buildings_handler(message: Message) -> None:
         i = i + 1
 
     
-        
+    #await message.answer(    
     global usrmc
     usrmc = mcreqjson[4]
     print(usrmc)
-    with open('userrequests.txt', 'a') as file:
-        file.write(f'command /buildings was used at {datetime.datetime.now()} \n')
+    with open('Buildingslogs.txt', 'a') as file:
+        file.write(f'At {datetime.datetime.now()} command /buildings was used\n')
 
     
 @dp.message(Command("groups"))
@@ -170,8 +167,8 @@ async def command_groups_handler(message: Message) -> None:
         await message.answer("Филиал не выбран, пропишите /buildings для выбора филиала")
     global usrgp
     usrgp = "1КС-1-11-25"
-    with open('userrequests.txt', 'a') as file:
-        file.write(f'command /groups was used at {datetime.datetime.now()} \n')
+    with open('groupslogs.txt', 'a') as file:
+        file.write(f'At {datetime.datetime.now()} command /groups was used \n')
 
 @dp.message(Command("timetable"))
 async def command_timetable_handler(message: Message) -> None:
@@ -204,8 +201,8 @@ async def command_timetable_handler(message: Message) -> None:
             else:
                 break
             i = i + 1
-    with open('userrequests.txt', 'a') as file:
-        file.write(f'command /timetable was used at {datetime.datetime.now()} \n')
+    with open('usercommandrequests.txt', 'a') as file:
+        file.write(f'At {datetime.datetime.now()} command /timetable was used \n')
     
 # Обработчики кнопок 
 @dp.message(lambda msg: msg.text == "Старт")
@@ -244,6 +241,13 @@ async def button_buildings_handler(message: Message) -> None:
 async def button_groups_handler(message: Message) -> None:
     await command_groups_handler(message)
 
+
+# Logging other user inputs
+@dp.message()
+async def usrinput(message: types.Message):
+    await message.answer("Кастомный запрос пользователя принят, он будет обработан в дальнейшем. Спасибо вам!")
+    with open('userrequests.txt', 'a') as file:
+        file.write(f'At {datetime.datetime.now()} was detected custom user input, contents: "{message.text}" \n')    
     
 #Bot initilization and it's API key
 async def main() -> None:
