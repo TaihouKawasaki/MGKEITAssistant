@@ -11,6 +11,9 @@ aiogram \\
 
 ** Logging documentation
 usercommandrequests.txt - файл логов статичных комманд по типу /help, /timetable
+
 Buildingslogs.txt - файл логов выбора филиалов
+
 Groupslogs.txt - файл логов выбора групп
+
 userrequests.txt -  файл логов остальных запросов пользователя
