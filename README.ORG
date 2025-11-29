@@ -1,12 +1,15 @@
 ** How to test \ install
-Установить python 3 \\
+Установить python 3
 
 Установить данные библиотеки для python:
-asyncio \\
-aiogram \\
+asyncio
 
-Перейти на https://mgkeit.space/developers#home, создать собственный API ключ и вставить его а 348 строчку \\
-Запустить main.py \\
+aiogram
+
+Перейти на https://mgkeit.space/developers#home, создать собственный API ключ и вставить его а 348 строчку
+
+Запустить main.py
+
 Бот находится по данному username @Chariton_bot
 
 ** Logging documentation
