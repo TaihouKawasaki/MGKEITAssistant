@@ -10,7 +10,6 @@ import datetime
 import time
 from aiogram.filters.command import Command
 from aiogram.fsm.context import FSMContext
-#import mariadb
 import json
 import sys
 import requests
@@ -21,13 +20,118 @@ from aiogram.filters import Command
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+import aiohttp
+
+#DEEPSEEK API CONFIG (для работы с ИИ)
+DEEPSEEK_API_KEY = "sk-587336cfed46439b92aee62d87a51faf"
+DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
+
+#SIMPLE CONTENT FILTER
+import re
+
+class SimpleContentFilter:
+    def __init__(self):
+        # Минимальный набор самых частых плохих слов
+        self.bad_patterns = [
+            r'\b[бb][лl][яyаa]\w*', 
+            r'\b[пp][иi][з3z]\w*', 
+            r'\b[еe][б6b]\w*',
+            r'\b[хx][уy]\w*',
+            r'\b[сc][уy][кk]\w*',
+            r'\b[мm][уy][дd][аa][кk]\w*',
+            r'\b[гg][оo0][нn][дd][оo0][нn]\w*',
+            r'\b[дd][еe][б6b][иi][лl]\w*',
+            r'\b[иi][дd][иi][оo0][тt]\w*',
+        ]
+        
+        # Базовые проверки
+        self.spam_patterns = [
+            r'http[s]?://\S+',
+            r'www\.\S+',
+            r'\S+@\S+\.\S+',
+        ]
+    
+    async def should_block(self, text: str) -> tuple[bool, str]:
+        """Простая проверка - возвращает (блокировать, причина)"""
+        if not text or len(text) < 2:
+            return False, ""
+        
+        # 1. Проверка длины
+        if len(text) > 500:
+            return True, "Сообщение слишком длинное"
+        
+        text_lower = text.lower()
+        
+        # 2. Проверка ссылок
+        for pattern in self.spam_patterns:
+            if re.search(pattern, text_lower):
+                return True, "Обнаружены ссылки"
+        
+        # 3. Проверка плохих слов
+        for pattern in self.bad_patterns:
+            if re.search(pattern, text_lower):
+                return True, "Обнаружена нецензурная лексика"
+        
+        # 4. Проверка КАПС ЛОК
+        if len(re.findall(r'[A-ZА-Я]', text)) / max(len(text), 1) > 0.6:
+            return True, "Слишком много заглавных букв"
+        
+        return False, ""
 
 dp = Dispatcher()
-# Роутер для обработки команд
 router = Router()
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
+content_filter = SimpleContentFilter()
 
+# Хранилище для DeepSeek контекста
+user_conversations = {}
+
+#DEEPSEEK API FUNCTION (функции ИИ)
+async def call_deepseek_api(message: str, user_id: int) -> str:
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}"
+    }
+    
+    if user_id not in user_conversations:
+        user_conversations[user_id] = []
+    
+    user_conversations[user_id].append({"role": "user", "content": message})
+    
+    if len(user_conversations[user_id]) > 8:
+        user_conversations[user_id] = user_conversations[user_id][-8:]
+    
+    data = {
+        "model": "deepseek-chat",
+        "messages": user_conversations[user_id],
+        "temperature": 0.7,
+        "max_tokens": 2048,
+        "stream": False
+    }
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(DEEPSEEK_API_URL, headers=headers, json=data, timeout=30) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    ai_response = result['choices'][0]['message']['content']
+                    
+                    user_conversations[user_id].append({"role": "assistant", "content": ai_response})
+                    
+                    print(f"Успешный ответ от API для пользователя {user_id}")
+                    return ai_response
+                else:
+                    error_text = await response.text()
+                    print(f"API Error: {response.status} - {error_text}")
+                    return "⚠️ Извините, произошла ошибка при обращении к AI-сервису. Попробуйте позже."
+                    
+    except asyncio.TimeoutError:
+        print("Timeout при обращении к DeepSeek API")
+        return "⏰ Превышено время ожидания ответа от AI. Попробуйте еще раз."
+    except Exception as e:
+        print(f"Request error: {e}")
+        return "❌ Произошла ошибка при обработке запроса. Попробуйте позже."
 
 # Класс состояний для хранения текущих выборов
 class ChoiceStates(StatesGroup):
@@ -37,10 +141,11 @@ class ChoiceStates(StatesGroup):
 # Создание списка кнопок с удобочитаемыми названиями
 buttons = [
     [KeyboardButton(text="🚀 Старт"), KeyboardButton(text="❓ Помощь")],
-    [KeyboardButton(text="🛠 Работа"), KeyboardButton(text="📄 Документы")],
-    [KeyboardButton(text="🔧 Версия"), KeyboardButton(text="✉️ Обратная связь")],
-    [KeyboardButton(text="📆 Расписание"), KeyboardButton(text="🏫 Филиалы")],
-    [KeyboardButton(text="👥 Группа")] 
+    [KeyboardButton(text="👥 Группа"), KeyboardButton(text="🏫 Филиалы")],
+    [KeyboardButton(text="📆 Расписание"), KeyboardButton(text="🛠 Работа")],
+    [KeyboardButton(text="🔧 Версия"), KeyboardButton(text="📄 Документы")],
+    [KeyboardButton(text="✉️ Обратная связь"), KeyboardButton(text="🤖 AI Помощник")],
+    [KeyboardButton(text="🆕 Новый диалог")]
 ]
 
 # Создание клавиатуры с передачей списка кнопок
@@ -49,7 +154,9 @@ commands_keyboard = ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 @dp.message(Command("start"))
 async def command_start_handler(message: Message) -> None:
     await message.answer('''Бот запущен!
-Для первичной настройки бота выберите филиал колледжа командой, затем группу.''', reply_markup=commands_keyboard)
+Для первичной настройки бота выберите филиал колледжа командой, затем группу.
+
+🤖 **Доступен AI-помощник** - используйте кнопку "AI Помощник" для общения с искусственным интеллектом!''', reply_markup=commands_keyboard)
     with open('usercommandrequests.txt', 'a') as file:
         file.write(f'At {datetime.datetime.now()} command /start was used \n')
 
@@ -64,7 +171,9 @@ async def command_help_handler(message: Message) -> None:
 /feedback - отправляет отзыв разработчикам
 /timetable - расписание занятий на сегодня
 /buildings - выбор филиала колледжа
-/groups - выбор учебной группы'''
+/groups - выбор учебной группы
+/ai - общение с AI-помощником (DeepSeek)
+/new - начать новый диалог с AI'''
     await message.answer(help_text, reply_markup=commands_keyboard)
     with open('usercommandrequests.txt', 'a') as file:
         file.write(f'At {datetime.datetime.now()} command /help was used \n')
@@ -86,23 +195,91 @@ async def command_doc_handler(message: Message) -> None:
 async def command_ver_handler(message: Message) -> None:
     await message.answer('''MGKEITAssistant ver1.0 indev build 25Nov28Kin03p37
 Github project of the bot in case I abandon this project: https://github.com/TaihouKawasaki/MGKEITAssistant
-Made by: TaihouKawasaki, NaokiEijiro''')
+Made by: TaihouKawasaki, NaokiEijiro
+
+🤖 **Интегрирован AI-помощник DeepSeek**
+🛡️ **Система фильтрации контента активна**''')
     with open('usercommandrequests.txt', 'a') as file:
         file.write(f'At {datetime.datetime.now()} command /ver was used \n')
+
+# AI Помощник команды
+@dp.message(Command("ai"))
+async def command_ai_handler(message: Message) -> None:
+    ai_help_text = '''
+🤖 **AI Помощник DeepSeek**
+
+Теперь вы можете общаться с искусственным интеллектом! Просто напишите любой вопрос или задачу.
+
+🛡️ **Фильтрация контента:** Сообщения проверяются на нецензурную лексику.
+
+💡 **Совет:** Используйте "Новый диалог" чтобы очистить историю разговора.
+'''
+    await message.answer(ai_help_text, reply_markup=commands_keyboard)
+    with open('usercommandrequests.txt', 'a') as file:
+        file.write(f'At {datetime.datetime.now()} command /ai was used \n')
+
+@dp.message(Command("new"))
+async def command_new_handler(message: Message) -> None:
+    user_id = message.from_user.id
+    if user_id in user_conversations:
+        user_conversations[user_id] = []
+        await message.answer("🆕 История диалога с AI очищена. Начинаем новый разговор!")
+    else:
+        await message.answer("✅ История диалога уже пуста. Можете начинать общение!")
+    with open('usercommandrequests.txt', 'a') as file:
+        file.write(f'At {datetime.datetime.now()} command /new was used \n')
+
+# Обработчик AI сообщений
+async def handle_ai_message(message: Message):
+    """Обработка сообщений для AI-помощника"""
+    user_id = message.from_user.id
+    
+    # Проверка на нецензурную лексику
+    has_profanity, reason = await profanity_filter.contains_profanity(message.text)
+    
+    if has_profanity:
+        warning_text = f"""
+🚫 **Сообщение заблокировано системой фильтрации**
+
+**Причина:** {reason}
+
+Пожалуйста, переформулируйте ваше сообщение без нарушений правил.
+"""
+        await message.answer(warning_text)
+        
+        with open('userrequests.txt', 'a') as file:
+            file.write(f'At {datetime.datetime.now()} AI message blocked for user {user_id}. Reason: {reason}\n')
+        return
+    
+    # Показываем индикатор набора
+    await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
+    
+    try:
+        # Получаем ответ от DeepSeek API
+        ai_response = await call_deepseek_api(message.text, user_id)
+        
+        # Проверка ответа от AI
+        has_profanity_in_response, _ = await profanity_filter.contains_profanity(ai_response)
+        if has_profanity_in_response:
+            ai_response = "⚠️ Извините, я не могу сгенерировать ответ на этот запрос из-за политики контента."
+        
+        # Отправляем ответ пользователю
+        await message.answer(ai_response)
+        
+        with open('userrequests.txt', 'a') as file:
+            file.write(f'At {datetime.datetime.now()} AI response sent to user {user_id}\n')
+        
+    except Exception as e:
+        print(f"Ошибка обработки AI сообщения: {e}")
+        await message.answer("❌ Произошла ошибка при обработке запроса. Попробуйте еще раз.")
+
 #Indev Build classification: Last 2 digits of the year + first 3 symbols of the month + 2 digit date + day of the week + Hours + AM\PM + Minutes
-
 #Monday - Getsu
-
 #Tuesday - Ka
-
 #Wednesday - Sui
-
 #Thursday - Moku
-
 #Friday - Kin
-
 #Saturday - Do
-
 #Sunday - Nichi
 
 dp.include_router(router)
@@ -335,17 +512,59 @@ async def button_buildings_handler(message: Message, state: FSMContext) -> None:
 async def button_groups_handler(message: Message, state: FSMContext) -> None:
     await groups_command_handler(message, state)
 
+@dp.message(lambda msg: msg.text == "🤖 AI Помощник")
+async def button_ai_handler(message: Message) -> None:
+    await command_ai_handler(message)
 
-# Logging other user inputs
+@dp.message(lambda msg: msg.text == "🆕 Новый диалог")
+async def button_new_handler(message: Message) -> None:
+    await command_new_handler(message)
+
+#Обработка сообщений с фильтром
 @dp.message()
-async def usrinput(message: types.Message):
-    await message.answer("Кастомный запрос пользователя принят, он будет обработан в дальнейшем. Спасибо вам!")
-    with open('userrequests.txt', 'a') as file:
-        file.write(f'At {datetime.datetime.now()} was detected custom user input, contents: "{message.text}" \n')    
+async def handle_all_messages(message: Message):
+    # Если сообщение не команда и не кнопка - проверяем фильтром
+    if (message.text and 
+        not message.text.startswith('/') and 
+        not any(btn.text == message.text for row in buttons for btn in row)):
+        
+        # Простая проверка фильтром
+        should_block, reason = await content_filter.should_block(message.text)
+        
+        if should_block:
+            await message.answer(f"🚫 Сообщение заблокировано: {reason}")
+            with open('userrequests.txt', 'a') as file:
+                file.write(f'At {datetime.datetime.now()} message blocked: {reason} - "{message.text}" \n')
+            return
+        
+        # Если прошло проверку - отправляем в AI
+        await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
+        
+        try:
+            # Ваш вызов DeepSeek API
+            response = await call_deepseek_api(message.text, message.from_user.id)
+            await message.answer(response)
+            
+        except Exception as e:
+            await message.answer("❌ Произошла ошибка при обработке запроса. Попробуйте позже.")
+            print(f"AI processing error: {e}")
+            
+    else:
+        # Логируем команды/кнопки
+        with open('userrequests.txt', 'a') as file:
+            file.write(f'At {datetime.datetime.now()} command/button: "{message.text}" \n')
     
 #Bot initilization and it's API key
 async def main() -> None:
     bot = Bot(token="5455458009:AAGSa9Qq2enzAXjbjxA9nHcCPpmvfreqYkk")
+    # Проверяем наличие DeepSeek API ключа
+    if DEEPSEEK_API_KEY == "ВАШ_DEEPSEEK_API_KEY_ЗДЕСЬ":
+        print("❌ ВНИМАНИЕ: Замените DEEPSEEK_API_KEY на реальный ключ!")
+    
+    print("🤖 Бот запускается...")
+    print("🛡️ Простая система фильтрации контента активна")
+    print(f"🧠 AI помощник: {'Активен' if DEEPSEEK_API_KEY != 'ВАШ_DEEPSEEK_API_KEY_ЗДЕСЬ' else 'Не настроен'}")
+    
     await dp.start_polling(bot)
 
 #loop
