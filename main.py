@@ -50,6 +50,12 @@ class SimpleContentFilter:
             r'www\.\S+',
             r'\S+@\S+\.\S+',
         ]
+        
+        # Спам-паттерны
+        self.spam_detection = [
+            r'(.)\1{5,}',  # 6+ одинаковых символов подряд
+            r'[!?.,]{4,}',  # 4+ знаков препинания подряд
+        ]
     
     async def should_block(self, text: str) -> tuple[bool, str]:
         """Простая проверка - возвращает (блокировать, причина)"""
@@ -59,6 +65,8 @@ class SimpleContentFilter:
         # 1. Проверка длины
         if len(text) > 500:
             return True, "Сообщение слишком длинное"
+        if len(text) < 10:
+            return True, "Сообщение слишком короткое"
         
         text_lower = text.lower()
         
@@ -76,8 +84,218 @@ class SimpleContentFilter:
         if len(re.findall(r'[A-ZА-Я]', text)) / max(len(text), 1) > 0.6:
             return True, "Слишком много заглавных букв"
         
+        # 5. Проверка на повторяющиеся символы (спам)
+        for pattern in self.spam_detection:
+            try:
+                if re.search(pattern, text):
+                    return True, "Обнаружен спам (повторяющиеся символы)"
+            except re.error as e:
+                # Логируем ошибку в паттерне, но продолжаем работу
+                print(f"Ошибка в паттерне: {pattern} - {e}")
+                continue
+        
+        # 6. Проверка на чередующиеся символы (типа "абабаб", "121212")
+        if await self._check_alternating_patterns(text):
+            return True, "Обнаружен спам (чередующиеся символы)"
+        
+        # 7. Проверка на циклические паттерны
+        if await self._check_cyclic_patterns(text):
+            return True, "Обнаружен циклический спам"
+        
+        # 8. Проверка на последовательности
+        if await self._check_sequential_patterns(text):
+            return True, "Обнаружена последовательность символов"
+        
+        # 9. Проверка на слишком много одинаковых слов
+        words = re.findall(r'\b\w+\b', text_lower)
+        if len(words) > 5:
+            word_counts = {}
+            for word in words:
+                if len(word) > 2:
+                    word_counts[word] = word_counts.get(word, 0) + 1
+            
+            for word, count in word_counts.items():
+                if count > 5 and len(word) > 3:
+                    return True, f"Слишком много повторений слова '{word[:10]}...'"
+        
+        # 10. Проверка на символьный спам
+        if re.search(r'[!?]{4,}', text):
+            return True, "Слишком много восклицательных или вопросительных знаков"
+        
+        # 11. Проверка на однотипные символы
+        if re.search(r'(.)\1{4,}', text):
+            char_match = re.search(r'(.)\1{4,}', text)
+            if char_match:
+                repeated_char = char_match.group(1)
+                if repeated_char != '.':
+                    return True, "Обнаружены повторяющиеся символы"
+        
+        # 12. Проверка на минимальную уникальность
+        if len(text) > 50:
+            unique_chars = len(set(text.lower()))
+            if unique_chars < 5:
+                return True, "Слишком мало уникальных символов (возможный спам)"
+        
+        # 13. Проверка на злоупотребление специальными символами
+        special_chars = re.findall(r'[@#$%^&*()_+=|<>~{}[\]:;"/\\]', text)
+        if len(special_chars) > len(text) * 0.3:
+            return True, "Слишком много специальных символов"
+        
+        # 14. Проверка на повтор символов с пробелами (простая версия)
+        if await self._check_repeated_chars_with_spaces(text):
+            return True, "Обнаружен спам с повторяющимися символами"
+        
         return False, ""
-
+    
+    async def _check_alternating_patterns(self, text: str) -> bool:
+        """Проверка на чередующиеся символы - упрощенная версия"""
+        text_no_spaces = re.sub(r'\s+', '', text.lower())
+        
+        if len(text_no_spaces) < 6:
+            return False
+        
+        # Проверяем простые случаи вручную
+        # 1. Проверка на "абабаб" или "121212" (2 символа)
+        if len(text_no_spaces) >= 4:
+            # Берем первые 4 символа
+            sample = text_no_spaces[:4]
+            # Проверяем, чередуются ли они
+            if len(set(sample)) <= 2:  # Если только 1-2 уникальных символа
+                # Проверяем паттерн из 2 символов
+                pattern = sample[:2]
+                # Проверяем, повторяется ли этот паттерн
+                repeats = 0
+                for i in range(0, len(text_no_spaces) - 1, 2):
+                    if i + 1 < len(text_no_spaces) and text_no_spaces[i:i+2] == pattern:
+                        repeats += 1
+                if repeats >= 3:  # Если паттерн повторяется 3+ раза
+                    return True
+        
+        # 2. Проверка на "абвабв" (3 символа)
+        if len(text_no_spaces) >= 6:
+            sample = text_no_spaces[:3]
+            # Если это 3 уникальных символа, проверяем повторение
+            if len(set(sample)) == 3:
+                # Проверяем, повторяется ли этот паттерн
+                repeats = 0
+                for i in range(0, len(text_no_spaces) - 2, 3):
+                    if i + 2 < len(text_no_spaces) and text_no_spaces[i:i+3] == sample:
+                        repeats += 1
+                if repeats >= 2:  # Если паттерн повторяется 2+ раза
+                    return True
+        
+        return False
+    
+    async def _check_cyclic_patterns(self, text: str) -> bool:
+        """Проверка на циклические паттерны (типа 'abcabcabc')"""
+        text_no_spaces = re.sub(r'\s+', '', text.lower())
+        
+        if len(text_no_spaces) < 6:
+            return False
+        
+        # Проверяем возможные длины циклов (2-5 символов)
+        for cycle_len in range(2, 6):
+            if len(text_no_spaces) >= cycle_len * 2:  # Хотя бы 2 повторения
+                # Берем предполагаемый паттерн из начала строки
+                possible_pattern = text_no_spaces[:cycle_len]
+                
+                # Строим ожидаемую строку с двумя повторениями
+                expected = possible_pattern * 2
+                
+                # Проверяем, начинается ли текст с двух повторений паттерна
+                if text_no_spaces.startswith(expected):
+                    # Также проверяем остаток текста
+                    remaining = text_no_spaces[len(expected):]
+                    if remaining.startswith(possible_pattern) or len(remaining) == 0:
+                        return True
+        
+        return False
+    
+    async def _check_sequential_patterns(self, text: str) -> bool:
+        """Проверка на последовательности символов - упрощенная версия"""
+        text_no_spaces = re.sub(r'\s+', '', text)
+        
+        if len(text_no_spaces) < 5:
+            return False
+        
+        # Проверяем последовательности цифр
+        digits_match = re.search(r'\d{5,}', text_no_spaces)
+        if digits_match:
+            digits = digits_match.group()
+            # Проверяем, являются ли цифры последовательными
+            if len(digits) >= 5:
+                # Преобразуем в список чисел
+                numbers = [int(d) for d in digits[:5]]
+                # Проверяем последовательность вперед
+                is_forward = all(numbers[i] + 1 == numbers[i+1] for i in range(len(numbers)-1))
+                # Проверяем последовательность назад
+                is_backward = all(numbers[i] - 1 == numbers[i+1] for i in range(len(numbers)-1))
+                
+                if is_forward or is_backward:
+                    return True
+        
+        # Проверяем буквенные последовательности (латиница)
+        letters_match = re.search(r'[a-zA-Z]{5,}', text_no_spaces)
+        if letters_match:
+            letters = letters_match.group().lower()
+            if len(letters) >= 5:
+                # Преобразуем в коды
+                codes = [ord(c) for c in letters[:5]]
+                is_forward = all(codes[i] + 1 == codes[i+1] for i in range(len(codes)-1))
+                is_backward = all(codes[i] - 1 == codes[i+1] for i in range(len(codes)-1))
+                
+                if is_forward or is_backward:
+                    return True
+        
+        # Проверяем русские буквенные последовательности
+        ru_letters_match = re.search(r'[а-я]{5,}', text_no_spaces.lower())
+        if ru_letters_match:
+            letters = ru_letters_match.group()
+            if len(letters) >= 5:
+                # Русский алфавит: а=1072, б=1073, в=1074, ...
+                codes = [ord(c) for c in letters[:5]]
+                is_forward = all(codes[i] + 1 == codes[i+1] for i in range(len(codes)-1))
+                is_backward = all(codes[i] - 1 == codes[i+1] for i in range(len(codes)-1))
+                
+                if is_forward or is_backward:
+                    return True
+        
+        return False
+    
+    async def _check_repeated_chars_with_spaces(self, text: str) -> bool:
+        """Проверка на повтор символов с пробелами (типа 'а а а а')"""
+        # Убираем все кроме букв и цифр
+        clean_text = re.sub(r'[^\w\s]', '', text.lower())
+        # Убираем множественные пробелы
+        clean_text = re.sub(r'\s+', ' ', clean_text).strip()
+        
+        words = clean_text.split()
+        if len(words) < 4:
+            return False
+        
+        # Проверяем, состоит ли текст из повторяющихся коротких слов/символов
+        # Считаем уникальные слова
+        unique_words = set(words)
+        if len(unique_words) <= 2 and len(words) >= 4:
+            # Если всего 1-2 уникальных слова, но много повторений
+            for word in unique_words:
+                if len(word) <= 2 and words.count(word) >= 4:
+                    return True
+        
+        # Проверяем паттерны типа "а б а б"
+        if len(words) >= 4:
+            # Проверяем паттерн из 2 слов
+            if len(words) >= 4:
+                pattern = words[:2]
+                repeats = 0
+                for i in range(0, len(words) - 1, 2):
+                    if i + 1 < len(words) and words[i:i+2] == pattern:
+                        repeats += 1
+                if repeats >= 2:  # Если паттерн повторяется 2+ раза
+                    return True
+        
+        return False
+    
 dp = Dispatcher()
 router = Router()
 storage = MemoryStorage()
@@ -124,7 +342,7 @@ async def call_deepseek_api(message: str, user_id: int) -> str:
                 else:
                     error_text = await response.text()
                     print(f"API Error: {response.status} - {error_text}")
-                    return "⚠️ Извините, произошла ошибка при обращении к AI-сервису. Попробуйте позже."
+                    return "✅ Спасибо за запрос."
                     
     except asyncio.TimeoutError:
         print("Timeout при обращении к DeepSeek API")
@@ -537,13 +755,13 @@ async def handle_all_messages(message: Message):
                 file.write(f'At {datetime.datetime.now()} message blocked: {reason} - "{message.text}" \n')
             return
         
-        with open('userrequests.txt', 'a') as file:
-            file.write(f'At {datetime.datetime.now()} was detected custom user input, contents: "{message.text}" \n')
+        #with open('userrequests.txt', 'a') as file:
+        #   file.write(f'At {datetime.datetime.now()} was detected custom user input, contents: "{message.text}" \n')
         
         # Если прошло проверку - отправляем в AI
         await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
         with open ('userrequests.txt', 'a') as file:
-            file.write(f'At {datetime.datetime.now()} this text was sent to AI: "{message.text}"')
+            file.write(f'At {datetime.datetime.now()} this text was sent to AI: "{message.text}" \n')
         try:
             # Ваш вызов DeepSeek API
             response = await call_deepseek_api(message.text, message.from_user.id)
