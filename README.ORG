@@ -1,7 +1,15 @@
 ** How to test \ install
 Установить python 3
 
-Установить данные библиотеки для python:
+На windows: winget install python3
+
+На arch базированных дистрибутивах: pacman -S python3
+
+На Debian базированных дистрибутивах: apt install python3
+
+На Fedora\Red Hat базированных дистрибутивах: dnf install python3
+
+Установить данные библиотеки для python по средством комманды pip install <название пакета>:
 
 asyncio
 
@@ -11,14 +19,17 @@ aiohttp
 
 requests
 
-Перейти на https://mgkeit.space/developers#home, создать собственный API ключ и вставить его а 348 строчку
+Перейти на https://mgkeit.space/developers#home, создать собственный API ключ и вставить его а 723 строчку
 
 Запустить main.py
 
 Бот находится по данному username @Chariton_bot
 
 ** Logging documentation
+
 usercommandrequests.txt - файл логов статичных комманд по типу /help, /timetable
+
+Bannedmessages.txt - файл запросов не прошедших фильтрацию
 
 Buildingslogs.txt - файл логов выбора филиалов
 
