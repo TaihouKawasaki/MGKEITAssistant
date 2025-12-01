@@ -9,7 +9,7 @@
 
 На Fedora\Red Hat базированных дистрибутивах: dnf install python3
 
-Установить данные библиотеки для python по средством комманды pip install <название пакета>:
+*** Установить данные библиотеки для python по средством комманды pip install <название пакета>:
 
 asyncio
 
@@ -18,6 +18,8 @@ aiogram
 aiohttp
 
 requests
+
+***Запуск
 
 Перейти на https://mgkeit.space/developers#home, создать собственный API ключ и вставить его а 723 строчку
 
