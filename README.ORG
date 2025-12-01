@@ -1,22 +1,22 @@
-* Planed
-** DONE Make redirect to MGKEIT Jobseeking assistant telegram channel (Done)
-** DONE Make a placeholder link to MGKEIT document requesting site (Done)
-** TODO Make Database for storing data from /feedback (after 1.0)
-** DONE College buildings request and choosing(Done)
-** DONE College groups request and choosing(Done)
-** DONE Implement mgkeit.space API for lesson's timetable (Done)
-** DONE Make simple commands work such as: /start; /help; /ver. (Done)
-** TODO Diffrent logging files for diffrent commands
-** TODO Add filter for logging custom user input and deny gilbrish
-* How to install \ test
-Install python 3 \\
+** How to test \ install
+Установить python 3
 
-Install these packages for python:
-asyncio \\
-aiogram \\
+Установить данные библиотеки для python:
+asyncio
 
-Go to https://mgkeit.space/developers#home, make your own API key and paste it it line 97 \\
-Run main.py \\
-Find and interact with the bot via this id: @mgkeit_test_bot
+aiogram
 
+Перейти на https://mgkeit.space/developers#home, создать собственный API ключ и вставить его а 348 строчку
 
+Запустить main.py
+
+Бот находится по данному username @Chariton_bot
+
+** Logging documentation
+usercommandrequests.txt - файл логов статичных комманд по типу /help, /timetable
+
+Buildingslogs.txt - файл логов выбора филиалов
+
+Groupslogs.txt - файл логов выбора групп
+
+userrequests.txt -  файл логов остальных запросов пользователя
