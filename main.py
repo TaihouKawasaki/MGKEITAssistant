@@ -533,13 +533,17 @@ async def handle_all_messages(message: Message):
         
         if should_block:
             await message.answer(f"🚫 Сообщение заблокировано: {reason}")
-            with open('userrequests.txt', 'a') as file:
+            with open('Bannedmessages.txt', 'a') as file:
                 file.write(f'At {datetime.datetime.now()} message blocked: {reason} - "{message.text}" \n')
             return
         
+        with open('userrequests.txt', 'a') as file:
+            file.write(f'At {datetime.datetime.now()} was detected custom user input, contents: "{message.text}" \n')
+        
         # Если прошло проверку - отправляем в AI
         await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
-        
+        with open ('userrequests.txt', 'a') as file:
+            file.write(f'At {datetime.datetime.now()} this text was sent to AI: "{message.text}"')
         try:
             # Ваш вызов DeepSeek API
             response = await call_deepseek_api(message.text, message.from_user.id)
