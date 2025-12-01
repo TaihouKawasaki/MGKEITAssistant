@@ -19,7 +19,7 @@ aiohttp
 
 requests
 
-***Запуск
+*** Запуск
 
 Перейти на https://mgkeit.space/developers#home, создать собственный API ключ и вставить его а 723 строчку
 
