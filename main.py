@@ -193,7 +193,7 @@ async def command_doc_handler(message: Message) -> None:
     
 @dp.message(Command("ver"))
 async def command_ver_handler(message: Message) -> None:
-    await message.answer('''MGKEITAssistant ver1.0 indev build 25Nov28Kin03p37
+    await message.answer('''MGKEITAssistant ver1.1 indev build 25Dec01Getsu11a02
 Github project of the bot in case I abandon this project: https://github.com/TaihouKawasaki/MGKEITAssistant
 Made by: TaihouKawasaki, NaokiEijiro
 
