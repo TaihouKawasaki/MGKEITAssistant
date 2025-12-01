@@ -25,6 +25,14 @@ requests
 
 Бот находится по данному username @Chariton_bot
 
+** Repo documentation
+
+LICENSE - Лицензия данного проекта
+
+README.ORG - readme файл \ документация
+
+main.py - Телеграм бот
+
 ** Logging documentation
 
 usercommandrequests.txt - файл логов статичных комманд по типу /help, /timetable
