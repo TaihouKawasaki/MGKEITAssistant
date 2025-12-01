@@ -2,9 +2,14 @@
 Установить python 3
 
 Установить данные библиотеки для python:
+
 asyncio
 
 aiogram
+
+aiohttp
+
+requests
 
 Перейти на https://mgkeit.space/developers#home, создать собственный API ключ и вставить его а 348 строчку
 
