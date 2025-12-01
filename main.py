@@ -22,15 +22,18 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 import aiohttp
 
-#DEEPSEEK API CONFIG (для работы с ИИ)
+#DEEPSEEK API CONFIG 
 DEEPSEEK_API_KEY = "sk-587336cfed46439b92aee62d87a51faf"
 DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
 
-#SIMPLE CONTENT FILTER
+#CONTENT FILTER
 import re
-
+import string
+import math
 class SimpleContentFilter:
     def __init__(self):
+        """Инициализация фильтра рандомного текста"""
+        
         # Минимальный набор самых частых плохих слов
         self.bad_patterns = [
             r'\b[бb][лl][яyаa]\w*', 
@@ -44,18 +47,93 @@ class SimpleContentFilter:
             r'\b[иi][дd][иi][оo0][тt]\w*',
         ]
         
-        # Базовые проверки
+        # Базовые проверки ссылок
         self.spam_patterns = [
             r'http[s]?://\S+',
             r'www\.\S+',
             r'\S+@\S+\.\S+',
         ]
         
-        # Спам-паттерны
-        self.spam_detection = [
-            r'(.)\1{5,}',  # 6+ одинаковых символов подряд
-            r'[!?.,]{4,}',  # 4+ знаков препинания подряд
+        # Раскладки клавиатуры
+        self.keyboard_layouts = {
+            'qwerty': [
+                'qwertyuiop',
+                'asdfghjkl',
+                'zxcvbnm'
+            ],
+            'azerty': [
+                'azertyuiop',
+                'qsdfghjklm',
+                'wxcvbn'
+            ],
+            'йцукен': [
+                'йцукенгшщзхъ',
+                'фывапролджэ',
+                'ячсмитьбю'
+            ]
+        }
+        
+        # Частые паттерны клавиш
+        self.key_patterns = [
+            # Горизонтальные строки
+            'qwerty', 'asdfgh', 'zxcvbn',
+            'йцукен', 'фывапр', 'ячсмит',
+            
+            # Вертикальные столбцы
+            'qaz', 'wsx', 'edc', 'rfv', 'tgb', 'yhn', 'ujm', 'ik', 'ol', 'p',
+            'йфя', 'цыч', 'увс', 'кам', 'епн', 'рго', 'илт', 'ош', 'щб', 'зж', 'хъ',
+            
+            # Диагонали
+            'qasw', 'wsde', 'edfr', 'rfgt', 'tghy', 'yhui', 'ujik', 'ikol', 'olp',
+            
+            # Комбинации
+            '123', '456', '789', 'qwe', 'rty', 'asd', 'fgh', 'zxc', 'vbn',
+            'йцу', 'фыв', 'ячс', '123456', 'qwerty', 'йцукен',
         ]
+        
+        
+        self.common_words = self._load_common_words()
+        
+        # Пороговые значения
+        self.thresholds = {
+            'min_length': 6,        
+            'max_repetition': 0.3,    
+            'min_entropy': 2.5,       
+            'keyboard_score': 0.6,    
+            'pattern_match': 0.7,     
+        }
+    
+    def _load_common_words(self) -> set[str]:
+        """Загружает список самых частых слов"""
+        common_words = {
+            'я', 'ты', 'он', 'она', 'оно', 'мы', 'вы', 'они', 'меня', 'тебя',
+            'его', 'её', 'нас', 'вас', 'их', 'себя', 'мой', 'твой', 'наш',
+            'ваш', 'свой', 'это', 'то', 'всё', 'все', 'такой', 'такая',
+            'такое', 'такие', 'который', 'которая', 'которое', 'которые',
+            'какой', 'какая', 'какое', 'какие', 'кто', 'что', 'где', 'куда',
+            'когда', 'почему', 'зачем', 'как', 'сколько', 'чей', 'чья',
+            'чьё', 'чьи', 'нет', 'да', 'не', 'ни', 'ну', 'вот', 'уж', 'даже',
+            'просто', 'прямо', 'почти', 'только', 'лишь', 'именно', 'даже',
+            'уже', 'ещё', 'опять', 'снова', 'вдруг', 'почти', 'совсем',
+            'очень', 'слишком', 'весьма', 'чрезвычайно', 'привет', 'пока',
+            'здравствуйте', 'до', 'свидания', 'спасибо', 'пожалуйста',
+            'извините', 'простите', 'здорово', 'хорошо', 'плохо', 'нормально',
+            'отлично', 'прекрасно', 'ужасно', 'замечательно', 'класс',
+            
+            
+            'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her',
+            'us', 'them', 'my', 'your', 'his', 'its', 'our', 'their', 'mine',
+            'yours', 'hers', 'ours', 'theirs', 'this', 'that', 'these',
+            'those', 'who', 'what', 'where', 'when', 'why', 'how', 'which',
+            'whose', 'whom', 'yes', 'no', 'not', 'very', 'too', 'so', 'just',
+            'only', 'really', 'quite', 'pretty', 'rather', 'almost', 'even',
+            'still', 'already', 'yet', 'again', 'never', 'always', 'often',
+            'sometimes', 'usually', 'rarely', 'seldom', 'hello', 'hi', 'bye',
+            'goodbye', 'thanks', 'thank', 'please', 'sorry', 'excuse',
+            'welcome', 'well', 'good', 'bad', 'okay', 'fine', 'great',
+            'excellent', 'terrible', 'awesome', 'cool', 'nice',
+        }
+        return common_words
     
     async def should_block(self, text: str) -> tuple[bool, str]:
         """Простая проверка - возвращает (блокировать, причина)"""
@@ -65,8 +143,6 @@ class SimpleContentFilter:
         # 1. Проверка длины
         if len(text) > 500:
             return True, "Сообщение слишком длинное"
-        if len(text) < 10:
-            return True, "Сообщение слишком короткое"
         
         text_lower = text.lower()
         
@@ -84,45 +160,11 @@ class SimpleContentFilter:
         if len(re.findall(r'[A-ZА-Я]', text)) / max(len(text), 1) > 0.6:
             return True, "Слишком много заглавных букв"
         
-        # 5. Проверка на повторяющиеся символы (спам)
-        for pattern in self.spam_detection:
-            try:
-                if re.search(pattern, text):
-                    return True, "Обнаружен спам (повторяющиеся символы)"
-            except re.error as e:
-                # Логируем ошибку в паттерне, но продолжаем работу
-                print(f"Ошибка в паттерне: {pattern} - {e}")
-                continue
-        
-        # 6. Проверка на чередующиеся символы (типа "абабаб", "121212")
-        if await self._check_alternating_patterns(text):
-            return True, "Обнаружен спам (чередующиеся символы)"
-        
-        # 7. Проверка на циклические паттерны
-        if await self._check_cyclic_patterns(text):
-            return True, "Обнаружен циклический спам"
-        
-        # 8. Проверка на последовательности
-        if await self._check_sequential_patterns(text):
-            return True, "Обнаружена последовательность символов"
-        
-        # 9. Проверка на слишком много одинаковых слов
-        words = re.findall(r'\b\w+\b', text_lower)
-        if len(words) > 5:
-            word_counts = {}
-            for word in words:
-                if len(word) > 2:
-                    word_counts[word] = word_counts.get(word, 0) + 1
-            
-            for word, count in word_counts.items():
-                if count > 5 and len(word) > 3:
-                    return True, f"Слишком много повторений слова '{word[:10]}...'"
-        
-        # 10. Проверка на символьный спам
+        # 5. Проверка на символьный спам
         if re.search(r'[!?]{4,}', text):
             return True, "Слишком много восклицательных или вопросительных знаков"
         
-        # 11. Проверка на однотипные символы
+        # 6. Проверка на однотипные символы
         if re.search(r'(.)\1{4,}', text):
             char_match = re.search(r'(.)\1{4,}', text)
             if char_match:
@@ -130,169 +172,326 @@ class SimpleContentFilter:
                 if repeated_char != '.':
                     return True, "Обнаружены повторяющиеся символы"
         
-        # 12. Проверка на минимальную уникальность
-        if len(text) > 50:
-            unique_chars = len(set(text.lower()))
-            if unique_chars < 5:
-                return True, "Слишком мало уникальных символов (возможный спам)"
-        
-        # 13. Проверка на злоупотребление специальными символами
+        # 7. Проверка на злоупотребление специальными символами
         special_chars = re.findall(r'[@#$%^&*()_+=|<>~{}[\]:;"/\\]', text)
         if len(special_chars) > len(text) * 0.3:
             return True, "Слишком много специальных символов"
         
-        # 14. Проверка на повтор символов с пробелами (простая версия)
-        if await self._check_repeated_chars_with_spaces(text):
-            return True, "Обнаружен спам с повторяющимися символами"
+        # 8. Проверка на рандомный текст
+        is_random, reason = self.is_random_text(text)
+        if is_random:
+            return True, f"Рандомный текст: {reason}"
         
         return False, ""
     
-    async def _check_alternating_patterns(self, text: str) -> bool:
-        """Проверка на чередующиеся символы - упрощенная версия"""
-        text_no_spaces = re.sub(r'\s+', '', text.lower())
+    def is_random_text(self, text: str) -> tuple[bool, str]:
+        """
+        Определяет, является ли текст рандомным.
+        Возвращает (является_ли_рандомным, причина)
+        """
+        if not text or len(text.strip()) < self.thresholds['min_length']:
+            return False, "Слишком короткий текст"
         
-        if len(text_no_spaces) < 6:
-            return False
+        text_lower = text.lower()
+        clean_text = re.sub(r'[^\w\s]', '', text_lower)
+        text_no_spaces = re.sub(r'\s+', '', clean_text)
         
-        # Проверяем простые случаи вручную
-        # 1. Проверка на "абабаб" или "121212" (2 символа)
-        if len(text_no_spaces) >= 4:
-            # Берем первые 4 символа
-            sample = text_no_spaces[:4]
-            # Проверяем, чередуются ли они
-            if len(set(sample)) <= 2:  # Если только 1-2 уникальных символа
-                # Проверяем паттерн из 2 символов
-                pattern = sample[:2]
-                # Проверяем, повторяется ли этот паттерн
-                repeats = 0
-                for i in range(0, len(text_no_spaces) - 1, 2):
-                    if i + 1 < len(text_no_spaces) and text_no_spaces[i:i+2] == pattern:
-                        repeats += 1
-                if repeats >= 3:  # Если паттерн повторяется 3+ раза
-                    return True
+        # Быстрые проверки
+        checks = [
+            self._check_repetitive_patterns,
+            self._check_keyboard_patterns,
+            self._check_low_entropy,
+            self._check_vowel_consonant_ratio,
+            self._check_no_meaningful_words,
+            self._check_keyboard_rows,
+            self._check_adjacent_keys,
+            self._check_character_variety,
+        ]
         
-        # 2. Проверка на "абвабв" (3 символа)
-        if len(text_no_spaces) >= 6:
-            sample = text_no_spaces[:3]
-            # Если это 3 уникальных символа, проверяем повторение
-            if len(set(sample)) == 3:
-                # Проверяем, повторяется ли этот паттерн
-                repeats = 0
-                for i in range(0, len(text_no_spaces) - 2, 3):
-                    if i + 2 < len(text_no_spaces) and text_no_spaces[i:i+3] == sample:
-                        repeats += 1
-                if repeats >= 2:  # Если паттерн повторяется 2+ раза
-                    return True
+        for check_func in checks:
+            is_random, reason = check_func(text_lower, clean_text, text_no_spaces)
+            if is_random:
+                return True, reason
         
-        return False
+        return False, "Нормальный текст"
     
-    async def _check_cyclic_patterns(self, text: str) -> bool:
-        """Проверка на циклические паттерны (типа 'abcabcabc')"""
-        text_no_spaces = re.sub(r'\s+', '', text.lower())
+    def _check_repetitive_patterns(self, text_lower: str, clean_text: str, text_no_spaces: str) -> tuple[bool, str]:
+        """Проверка повторяющихся паттернов"""
+        if len(text_no_spaces) < 8:
+            return False, ""
         
+        # Проверка циклических паттернов (abcabc)
+        for pattern_len in range(2, 5):
+            if len(text_no_spaces) >= pattern_len * 2:
+                pattern = text_no_spaces[:pattern_len]
+                repeats = 0
+                for i in range(0, len(text_no_spaces) - pattern_len + 1, pattern_len):
+                    if text_no_spaces[i:i+pattern_len] == pattern:
+                        repeats += 1
+                if repeats >= 3:
+                    return True, f"Циклический паттерн '{pattern}'"
+        
+        # Проверка повторяющихся символов
+        char_counts = {}
+        for char in text_no_spaces:
+            char_counts[char] = char_counts.get(char, 0) + 1
+        
+        most_common = max(char_counts.values(), default=0)
+        if most_common / len(text_no_spaces) > self.thresholds['max_repetition']:
+            return True, "Слишком много повторяющихся символов"
+        
+        return False, ""
+    
+    def _check_keyboard_patterns(self, text_lower: str, clean_text: str, text_no_spaces: str) -> tuple[bool, str]:
+        """Проверка паттернов клавиатуры"""
+        if len(text_no_spaces) < 4:
+            return False, ""
+        
+        # Проверка известных паттернов
+        for pattern in self.key_patterns:
+            if pattern in text_no_spaces:
+                if not self._is_in_common_word(text_lower, pattern):
+                    return True, f"Паттерн клавиш '{pattern}'"
+        
+        return False, ""
+    
+    def _check_low_entropy(self, text_lower: str, clean_text: str, text_no_spaces: str) -> tuple[bool, str]:
+        """Проверка низкой энтропии (информационной плотности)"""
+        if len(text_no_spaces) < 10:
+            return False, ""
+        
+        entropy = self._calculate_entropy(text_no_spaces)
+        
+        if entropy < self.thresholds['min_entropy']:
+            return True, f"Низкая энтропия ({entropy:.2f})"
+        
+        return False, ""
+    
+    def _calculate_entropy(self, text: str) -> float:
+        """Вычисляет информационную энтропию текста"""
+        if not text:
+            return 0
+        
+        # Подсчет частот символов
+        char_counts = {}
+        for char in text:
+            char_counts[char] = char_counts.get(char, 0) + 1
+        
+        entropy = 0
+        text_len = len(text)
+        
+        for count in char_counts.values():
+            probability = count / text_len
+            entropy -= probability * math.log2(probability)
+        
+        return entropy
+    
+    def _check_vowel_consonant_ratio(self, text_lower: str, clean_text: str, text_no_spaces: str) -> tuple[bool, str]:
+        """Проверка соотношения гласных/согласных"""
+        if len(text_no_spaces) < 8:
+            return False, ""
+        
+        vowels_en = 'aeiou'
+        vowels_ru = 'аеёиоуыэюя'
+        vowels = vowels_en + vowels_ru
+        
+        consonants_en = 'bcdfghjklmnpqrstvwxyz'
+        consonants_ru = 'бвгджзйклмнпрстфхцчшщ'
+        consonants = consonants_en + consonants_ru
+        
+
+        vowel_count = sum(1 for c in text_no_spaces if c in vowels)
+        consonant_count = sum(1 for c in text_no_spaces if c in consonants)
+        
+        total_letters = vowel_count + consonant_count
+        
+        if total_letters < 6:
+            return False, ""
+        
+        vowel_ratio = vowel_count / total_letters
+        
+        
+        if vowel_ratio < 0.2 or vowel_ratio > 0.8:
+            return True, f"Ненормальное соотношение гласных/согласных ({vowel_ratio*100:.1f}% гласных)"
+        
+        return False, ""
+    
+    def _check_no_meaningful_words(self, text_lower: str, clean_text: str, text_no_spaces: str) -> tuple[bool, str]:
+        """Проверка отсутствия осмысленных слов"""
+        words = re.findall(r'\b\w+\b', clean_text)
+        
+        if not words:
+            return False, ""
+        
+        
+        meaningful_count = 0
+        for word in words:
+            if self._is_meaningful_word(word):
+                meaningful_count += 1
+        
+        meaningful_ratio = meaningful_count / len(words)
+        
+        if meaningful_ratio < 0.2: 
+            return True, "Слишком мало осмысленных слов"
+        
+        return False, ""
+    
+    def _is_meaningful_word(self, word: str) -> bool:
+        """Определяет, является ли слово осмысленным"""
+        if len(word) <= 2:
+            # Короткие слова проверяем по словарю
+            return word.lower() in self.common_words
+        
+        # Длинные слова считаем осмысленными, если они не выглядят как рандом
+        # Проверяем наличие гласных
+        vowels = 'aeiouаеёиоуыэюя'
+        has_vowels = any(char in vowels for char in word.lower())
+        
+        # Проверяем наличие повторяющихся паттернов
+        if len(word) >= 4:
+            # Ищем повторяющиеся триграммы
+            trigrams = {}
+            for i in range(len(word) - 2):
+                trigram = word[i:i+3].lower()
+                trigrams[trigram] = trigrams.get(trigram, 0) + 1
+            
+            # Если какая-то триграмма повторяется
+            for count in trigrams.values():
+                if count > 1:
+                    return False  # Вероятно, рандомный паттерн
+        
+        return has_vowels  # Слово с гласными считаем осмысленным
+    
+    def _check_keyboard_rows(self, text_lower: str, clean_text: str, text_no_spaces: str) -> tuple[bool, str]:
+        """Проверка строк клавиатуры"""
         if len(text_no_spaces) < 6:
-            return False
+            return False, ""
         
-        # Проверяем возможные длины циклов (2-5 символов)
-        for cycle_len in range(2, 6):
-            if len(text_no_spaces) >= cycle_len * 2:  # Хотя бы 2 повторения
-                # Берем предполагаемый паттерн из начала строки
-                possible_pattern = text_no_spaces[:cycle_len]
+        # Проверяем все раскладки
+        for layout_name, rows in self.keyboard_layouts.items():
+            for row in rows:
+                if len(row) < 3:
+                    continue
                 
-                # Строим ожидаемую строку с двумя повторениями
-                expected = possible_pattern * 2
+                # Проверяем, состоит ли текст в основном из символов одной строки
+                row_chars = set(row)
+                text_chars = set(text_no_spaces)
                 
-                # Проверяем, начинается ли текст с двух повторений паттерна
-                if text_no_spaces.startswith(expected):
-                    # Также проверяем остаток текста
-                    remaining = text_no_spaces[len(expected):]
-                    if remaining.startswith(possible_pattern) or len(remaining) == 0:
+                # Если более 80% символов из одной строки
+                common_chars = text_chars.intersection(row_chars)
+                if len(common_chars) / max(len(text_chars), 1) > 0.8:
+                    # Проверяем, что это не часть нормального слова
+                    if not self._is_in_common_word(text_lower, row):
+                        return True, f"Символы из строки '{row}' ({layout_name})"
+        
+        return False, ""
+    
+    def _check_adjacent_keys(self, text_lower: str, clean_text: str, text_no_spaces: str) -> tuple[bool, str]:
+        """Проверка рядом стоящих клавиш"""
+        if len(text_no_spaces) < 4:
+            return False, ""
+        
+        # Координаты клавиш на QWERTY
+        qwerty_coords = {
+            '1': (0, 0), '2': (0, 1), '3': (0, 2), '4': (0, 3), '5': (0, 4), '6': (0, 5), '7': (0, 6), '8': (0, 7), '9': (0, 8), '0': (0, 9),
+            'q': (1, 0), 'w': (1, 1), 'e': (1, 2), 'r': (1, 3), 't': (1, 4), 'y': (1, 5), 'u': (1, 6), 'i': (1, 7), 'o': (1, 8), 'p': (1, 9),
+            'a': (2, 0), 's': (2, 1), 'd': (2, 2), 'f': (2, 3), 'g': (2, 4), 'h': (2, 5), 'j': (2, 6), 'k': (2, 7), 'l': (2, 8),
+            'z': (3, 0), 'x': (3, 1), 'c': (3, 2), 'v': (3, 3), 'b': (3, 4), 'n': (3, 5), 'm': (3, 6),
+        }
+        
+        # Координаты клавиш на ЙЦУКЕН
+        ycuken_coords = {
+            'ё': (0, 0), '1': (0, 1), '2': (0, 2), '3': (0, 3), '4': (0, 4), '5': (0, 5), '6': (0, 6), '7': (0, 7), '8': (0, 8), '9': (0, 9), '0': (0, 10), '-': (0, 11), '=': (0, 12),
+            'й': (1, 0), 'ц': (1, 1), 'у': (1, 2), 'к': (1, 3), 'е': (1, 4), 'н': (1, 5), 'г': (1, 6), 'ш': (1, 7), 'щ': (1, 8), 'з': (1, 9), 'х': (1, 10), 'ъ': (1, 11),
+            'ф': (2, 0), 'ы': (2, 1), 'в': (2, 2), 'а': (2, 3), 'п': (2, 4), 'р': (2, 5), 'о': (2, 6), 'л': (2, 7), 'д': (2, 8), 'ж': (2, 9), 'э': (2, 10),
+            'я': (3, 0), 'ч': (3, 1), 'с': (3, 2), 'м': (3, 3), 'и': (3, 4), 'т': (3, 5), 'ь': (3, 6), 'б': (3, 7), 'ю': (3, 8), '.': (3, 9),
+        }
+        
+        all_coords = {**qwerty_coords, **ycuken_coords}
+        
+        # Анализируем последовательности
+        for i in range(len(text_no_spaces) - 3):
+            sequence = text_no_spaces[i:i+4]
+            
+            # Проверяем, что все символы есть в координатах
+            if all(char in all_coords for char in sequence):
+                coords = [all_coords[char] for char in sequence]
+                
+                # Проверяем, являются ли клавиши соседними
+                is_adjacent = True
+                for j in range(len(coords) - 1):
+                    row1, col1 = coords[j]
+                    row2, col2 = coords[j + 1]
+                    
+                    # Расстояние между клавишами
+                    row_diff = abs(row1 - row2)
+                    col_diff = abs(col1 - col2)
+                    
+                    # Клавиши считаются соседними если они рядом по горизонтали, вертикали или диагонали
+                    if row_diff > 1 or col_diff > 1:
+                        is_adjacent = False
+                        break
+                
+                if is_adjacent:
+                    return True, "Рядом стоящие клавиши"
+        
+        return False, ""
+    
+    def _check_character_variety(self, text_lower: str, clean_text: str, text_no_spaces: str) -> tuple[bool, str]:
+        """Проверка разнообразия символов"""
+        if len(text_no_spaces) < 10:
+            return False, ""
+        
+        # Уникальные символы
+        unique_chars = len(set(text_no_spaces))
+        unique_ratio = unique_chars / len(text_no_spaces)
+        
+        # Нормальный текст имеет разнообразие символов
+        if unique_ratio < 0.3:
+            return True, f"Слишком мало уникальных символов ({unique_chars}/{len(text_no_spaces)})"
+        
+        # Проверяем группы символов
+        groups = {
+            'letters': string.ascii_letters + 'абвгдеёжзийклмнопрстуфхцчшщъыьэюя',
+            'digits': string.digits,
+            'symbols': string.punctuation + ' '
+        }
+        
+        # Считаем символы по группам
+        group_counts = {group: 0 for group in groups}
+        
+        for char in text_lower:
+            for group_name, group_chars in groups.items():
+                if char in group_chars:
+                    group_counts[group_name] += 1
+                    break
+        
+        # Проверяем, не состоит ли текст в основном из одной группы
+        for group_name, count in group_counts.items():
+            if count / len(text_lower) > 0.9:
+                return True, f"Текст состоит в основном из {group_name}"
+        
+        return False, ""
+    
+    def _is_in_common_word(self, text: str, pattern: str) -> bool:
+        """Проверяет, является ли паттерн частью часто используемого слова"""
+        allowed_patterns_in_words = {
+            'qwerty': ['qwerty'],
+            'asdf': ['asdf'],
+            'йцукен': ['йцукен'],
+            'фыва': ['фыва'],
+            'password': ['password'],
+            'keyboard': ['keyboard'],
+            'test': ['test'],
+            'hello': ['hello'],
+        }
+        
+        # Проверяем весь текст на наличие слов с паттернами
+        for word, patterns in allowed_patterns_in_words.items():
+            if word in text.lower():
+                for p in patterns:
+                    if p == pattern:
                         return True
-        
-        return False
-    
-    async def _check_sequential_patterns(self, text: str) -> bool:
-        """Проверка на последовательности символов - упрощенная версия"""
-        text_no_spaces = re.sub(r'\s+', '', text)
-        
-        if len(text_no_spaces) < 5:
-            return False
-        
-        # Проверяем последовательности цифр
-        digits_match = re.search(r'\d{5,}', text_no_spaces)
-        if digits_match:
-            digits = digits_match.group()
-            # Проверяем, являются ли цифры последовательными
-            if len(digits) >= 5:
-                # Преобразуем в список чисел
-                numbers = [int(d) for d in digits[:5]]
-                # Проверяем последовательность вперед
-                is_forward = all(numbers[i] + 1 == numbers[i+1] for i in range(len(numbers)-1))
-                # Проверяем последовательность назад
-                is_backward = all(numbers[i] - 1 == numbers[i+1] for i in range(len(numbers)-1))
-                
-                if is_forward or is_backward:
-                    return True
-        
-        # Проверяем буквенные последовательности (латиница)
-        letters_match = re.search(r'[a-zA-Z]{5,}', text_no_spaces)
-        if letters_match:
-            letters = letters_match.group().lower()
-            if len(letters) >= 5:
-                # Преобразуем в коды
-                codes = [ord(c) for c in letters[:5]]
-                is_forward = all(codes[i] + 1 == codes[i+1] for i in range(len(codes)-1))
-                is_backward = all(codes[i] - 1 == codes[i+1] for i in range(len(codes)-1))
-                
-                if is_forward or is_backward:
-                    return True
-        
-        # Проверяем русские буквенные последовательности
-        ru_letters_match = re.search(r'[а-я]{5,}', text_no_spaces.lower())
-        if ru_letters_match:
-            letters = ru_letters_match.group()
-            if len(letters) >= 5:
-                # Русский алфавит: а=1072, б=1073, в=1074, ...
-                codes = [ord(c) for c in letters[:5]]
-                is_forward = all(codes[i] + 1 == codes[i+1] for i in range(len(codes)-1))
-                is_backward = all(codes[i] - 1 == codes[i+1] for i in range(len(codes)-1))
-                
-                if is_forward or is_backward:
-                    return True
-        
-        return False
-    
-    async def _check_repeated_chars_with_spaces(self, text: str) -> bool:
-        """Проверка на повтор символов с пробелами (типа 'а а а а')"""
-        # Убираем все кроме букв и цифр
-        clean_text = re.sub(r'[^\w\s]', '', text.lower())
-        # Убираем множественные пробелы
-        clean_text = re.sub(r'\s+', ' ', clean_text).strip()
-        
-        words = clean_text.split()
-        if len(words) < 4:
-            return False
-        
-        # Проверяем, состоит ли текст из повторяющихся коротких слов/символов
-        # Считаем уникальные слова
-        unique_words = set(words)
-        if len(unique_words) <= 2 and len(words) >= 4:
-            # Если всего 1-2 уникальных слова, но много повторений
-            for word in unique_words:
-                if len(word) <= 2 and words.count(word) >= 4:
-                    return True
-        
-        # Проверяем паттерны типа "а б а б"
-        if len(words) >= 4:
-            # Проверяем паттерн из 2 слов
-            if len(words) >= 4:
-                pattern = words[:2]
-                repeats = 0
-                for i in range(0, len(words) - 1, 2):
-                    if i + 1 < len(words) and words[i:i+2] == pattern:
-                        repeats += 1
-                if repeats >= 2:  # Если паттерн повторяется 2+ раза
-                    return True
         
         return False
     
@@ -411,7 +610,7 @@ async def command_doc_handler(message: Message) -> None:
     
 @dp.message(Command("ver"))
 async def command_ver_handler(message: Message) -> None:
-    await message.answer('''MGKEITAssistant ver1.1 indev build 25Dec01Getsu11a02
+    await message.answer('''MGKEITAssistant ver1.1.1 indev build 25Dec01Getsu01p42
 Github project of the bot in case I abandon this project: https://github.com/TaihouKawasaki/MGKEITAssistant
 Made by: TaihouKawasaki, NaokiEijiro
 
@@ -419,6 +618,16 @@ Made by: TaihouKawasaki, NaokiEijiro
 🛡️ **Система фильтрации контента активна**''')
     with open('usercommandrequests.txt', 'a') as file:
         file.write(f'At {datetime.datetime.now()} command /ver was used \n')
+
+#Indev Build classification: Last 2 digits of the year + first 3 symbols of the month + 2 digit date + day of the week + Hours + AM\PM + Minutes
+#Monday - Getsu
+#Tuesday - Ka
+#Wednesday - Sui
+#Thursday - Moku
+#Friday - Kin
+#Saturday - Do
+#Sunday - Nichi
+
 
 # AI Помощник команды
 @dp.message(Command("ai"))
@@ -473,15 +682,11 @@ async def handle_ai_message(message: Message):
     await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
     
     try:
-        # Получаем ответ от DeepSeek API
         ai_response = await call_deepseek_api(message.text, user_id)
         
-        # Проверка ответа от AI
         has_profanity_in_response, _ = await profanity_filter.contains_profanity(ai_response)
         if has_profanity_in_response:
             ai_response = "⚠️ Извините, я не могу сгенерировать ответ на этот запрос из-за политики контента."
-        
-        # Отправляем ответ пользователю
         await message.answer(ai_response)
         
         with open('userrequests.txt', 'a') as file:
@@ -491,14 +696,6 @@ async def handle_ai_message(message: Message):
         print(f"Ошибка обработки AI сообщения: {e}")
         await message.answer("❌ Произошла ошибка при обработке запроса. Попробуйте еще раз.")
 
-#Indev Build classification: Last 2 digits of the year + first 3 symbols of the month + 2 digit date + day of the week + Hours + AM\PM + Minutes
-#Monday - Getsu
-#Tuesday - Ka
-#Wednesday - Sui
-#Thursday - Moku
-#Friday - Kin
-#Saturday - Do
-#Sunday - Nichi
 
 dp.include_router(router)
 
@@ -531,7 +728,7 @@ curweekday = datetime.datetime.today().weekday()
 def generate_inline_buttons(data):
     """Создание inline-клавиатуры с кнопками в две колонки."""
     buttons = []
-    row = []  # Однострочный массив кнопок
+    row = []
     for idx, item in enumerate(data, start=1):
         callback_data = f"select_{item}"
         button = InlineKeyboardButton(text=f"{idx}. {item}", callback_data=callback_data)
@@ -551,17 +748,13 @@ async def buildings_command_handler(message: Message, state: FSMContext):
     if mcreq.status_code != 200:
         await message.answer(f"Ошибка при получении данных. Код ответа: {mcreq.status_code}, Сообщение: {mcreq.text}")
         return
-    
     await message.answer("Производим запрос филиалов колледжа...")
-    
-    # Парсим JSON и получаем список филиалов
     try:
         mcreqjson = mcreq.json()['buildings']
     except Exception as e:
         await message.answer(f"Произошла ошибка: {e}")
         return
     
-    # Генерируем inline-клавиатуру
     markup = generate_inline_buttons(mcreqjson)
     await message.answer("Выберите филиал:", reply_markup=markup)
 
@@ -594,21 +787,14 @@ async def groups_command_handler(message: Message, state: FSMContext):
     # Чтение выбранного филиала из состояния
     data = await state.get_data()
     usrmc = data.get("building")
-    
     if not usrmc:
         await message.answer("Сначала выберите филиал с помощью команды /buildings.")
         return
-    
     await message.answer("Производим запрос групп...")
-    
-    # Отправляем запрос на сервер с выбранным филиалом
     gpreq = requests.post(COL_URL + gp, headers={"Authorization": API_KEY}, json={"building": usrmc, "limit": 500})
-    
     if gpreq.status_code != 200:
         await message.answer(f"Ошибка при получении данных. Код ответа: {gpreq.status_code}, Сообщение: {gpreq.text}")
         return
-    
-    # Парсим JSON и получаем список групп
     gpreqjson = gpreq.json()
     gpreqjson = gpreqjson['groups']
     
@@ -626,7 +812,7 @@ async def handle_group_selection(query: CallbackQuery, state: FSMContext):
     await state.update_data(group=chosen_group)
     
     # Завершаем этап выбора группы
-    await state.set_state(ChoiceStates.SELECTING_BUILDINGS)  # Устанавливаем отсутствие активных состояний
+    await state.set_state(ChoiceStates.SELECTING_BUILDINGS) 
     
     # Отвечаем пользователю и сохраняем выбор
     await query.message.edit_text(f"Вы выбрали группу: {chosen_group}")
@@ -640,11 +826,8 @@ async def groups_command_redirect(message: Message, state: FSMContext) -> None:
 # Обработчик команды /timetable
 @router.message(Command("timetable"))
 async def timetable_command_handler(message: Message, state: FSMContext):
-    # Читаем данные состояния
     data = await state.get_data()
     print("Current state data before timetable:", data)
-
-    # Читаем выбранную группу из состояния
     usrgp = data.get("building")
     
     if not usrgp:
@@ -690,7 +873,6 @@ async def timetable_command_handler(message: Message, state: FSMContext):
 @dp.message(Command("timetable"))
 async def timetable_command_redirect(message: Message, state: FSMContext) -> None:
     await timetable_command_handler(message, state)
-# Включаем роутер в диспетчер
 
     
 # Обработчики кнопок 
@@ -754,16 +936,12 @@ async def handle_all_messages(message: Message):
             with open('Bannedmessages.txt', 'a') as file:
                 file.write(f'At {datetime.datetime.now()} message blocked: {reason} - "{message.text}" \n')
             return
-        
-        #with open('userrequests.txt', 'a') as file:
-        #   file.write(f'At {datetime.datetime.now()} was detected custom user input, contents: "{message.text}" \n')
-        
         # Если прошло проверку - отправляем в AI
         await message.bot.send_chat_action(chat_id=message.chat.id, action="typing")
         with open ('userrequests.txt', 'a') as file:
             file.write(f'At {datetime.datetime.now()} this text was sent to AI: "{message.text}" \n')
         try:
-            # Ваш вызов DeepSeek API
+            # Вызов DeepSeek API
             response = await call_deepseek_api(message.text, message.from_user.id)
             await message.answer(response)
             
@@ -772,7 +950,6 @@ async def handle_all_messages(message: Message):
             print(f"AI processing error: {e}")
             
     else:
-        # Логируем команды/кнопки
         with open('userrequests.txt', 'a') as file:
             file.write(f'At {datetime.datetime.now()} command/button: "{message.text}" \n')
     
